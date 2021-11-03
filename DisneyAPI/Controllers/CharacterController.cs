@@ -115,6 +115,7 @@ namespace DisneyAPI.Controllers
                 if (viewModel.IdMovie != 0)
                 {
                     characters = characters.Where(x => x.MovieOrSeries.FirstOrDefault(x => x.Id == viewModel.IdMovie) != null).ToList();
+                   // characters.RemoveAll(x => x.MovieOrSeries.Where(x => x.Id != viewModel.IdMovie) !=null);
                 }
                 if (!string.IsNullOrEmpty(viewModel.Name))
                 {
