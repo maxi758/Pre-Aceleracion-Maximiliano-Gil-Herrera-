@@ -12,7 +12,7 @@ namespace DisneyAPI.Entities
         public DateTime CreationDate { get; set; }
         //[Range(1,5)]
         public int Score { get; set; }
-        public ICollection<Character> Characters { get; set; } = new List<Character>();
-        public ICollection<Genre> Genre { get; set; } = new List<Genre>();
+        public ICollection<Character> Characters { get; set; } 
+        public ICollection<Genre> Genre { get; set; }
     }
 }

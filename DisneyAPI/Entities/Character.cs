@@ -13,7 +13,6 @@ namespace DisneyAPI.Entities
         public string Name { get; set; }
         public int Weight { get; set; }
         public string Story { get; set; }
-        [System.Text.Json.Serialization.JsonIgnore]
-        public ICollection<MovieOrSerie> MovieOrSeries { get; set; } = new List<MovieOrSerie>();
+        public ICollection<MovieOrSerie> MovieOrSeries { get; set; } 
     }
 }
