@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DisneyAPI.Migrations
 {
     [DbContext(typeof(DisneyContext))]
-    [Migration("20211101152724_first")]
-    partial class first
+    [Migration("20211107223755_DisneyFirst")]
+    partial class DisneyFirst
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

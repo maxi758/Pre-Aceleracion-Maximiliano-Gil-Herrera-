@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace DisneyAPI.Migrations
 {
-    public partial class first : Migration
+    public partial class DisneyFirst : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
