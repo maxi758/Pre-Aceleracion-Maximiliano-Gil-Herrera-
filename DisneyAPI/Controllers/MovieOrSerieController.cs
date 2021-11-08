@@ -12,6 +12,7 @@ namespace DisneyAPI.Controllers
 {
     [ApiController]
     [Route(template: "api/[controller]")]
+    [Authorize]
     public class MovieOrSerieController : ControllerBase
     {
         private readonly IMovieOrSerieRepository _movieOrSerieRepository;
@@ -26,92 +27,110 @@ namespace DisneyAPI.Controllers
 
         [HttpGet]
         [Route("movies")]
-        [Authorize]
+        [AllowAnonymous]
         public IActionResult Get()
         {
-            var movieOrSeries = _movieOrSerieRepository.GetAllMoviesOrSeries();
-            if (movieOrSeries == null) return BadRequest("No se ha agregado contenido");
-            var moviesOrSeriesVM = new List<MovieOrSerieGetResponseViewModel>();
-            foreach (var item in movieOrSeries)
+            try
             {
-                moviesOrSeriesVM.Add(new MovieOrSerieGetResponseViewModel
+                var movieOrSeries = _movieOrSerieRepository.GetAllMoviesOrSeries();
+                if (movieOrSeries == null) return NoContent();
+                var moviesOrSeriesVM = new List<MovieOrSerieGetResponseViewModel>();
+                foreach (var item in movieOrSeries)
                 {
-                    Imagen = item.Imagen,
-                    CreationDate = item.CreationDate,
-                    Title = item.Title
+                    moviesOrSeriesVM.Add(new MovieOrSerieGetResponseViewModel
+                    {
+                        Imagen = item.Imagen,
+                        CreationDate = item.CreationDate,
+                        Title = item.Title
 
-                });
+                    });
+                }
+                return Ok(moviesOrSeriesVM);
+
             }
-            return Ok(moviesOrSeriesVM);
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+            
         }
 
         [HttpGet]
         [Route("movieDetails")]
         public IActionResult Get(int id)
         {
-            var movieOrSerie = _movieOrSerieRepository.GetMovieOrSerie(id);
-
-            if (movieOrSerie == null) return BadRequest("La pelicula o serie  no existe");
-            MovieOrSerieGetAllDataViewModel movieOrSerieVM = new MovieOrSerieGetAllDataViewModel
+            try
             {
-                Id = movieOrSerie.Id,
-                Imagen = movieOrSerie.Imagen,
-                CreationDate = movieOrSerie.CreationDate,
-                Title = movieOrSerie.Title,
-                Score = movieOrSerie.Score,
+                var movieOrSerie = _movieOrSerieRepository.GetMovieOrSerie(id);
 
-            };
-            if (movieOrSerie.Characters.Any())
-            {               
-                foreach (var item in movieOrSerie.Characters)
+                if (movieOrSerie == null) return BadRequest("La pelicula o serie  no existe");
+                MovieOrSerieGetAllDataViewModel movieOrSerieVM = new MovieOrSerieGetAllDataViewModel
                 {
-                    var element = movieOrSerie.Characters.FirstOrDefault(x => x.Id == item.Id);
-                    var characterVM = new CharacterGetResponseViewModel
+                    Id = movieOrSerie.Id,
+                    Imagen = movieOrSerie.Imagen,
+                    CreationDate = movieOrSerie.CreationDate,
+                    Title = movieOrSerie.Title,
+                    Score = movieOrSerie.Score,
+
+                };
+                if (movieOrSerie.Characters.Any())
+                {
+                    foreach (var item in movieOrSerie.Characters)
                     {
-                        Id = element.Id,
-                        Name = element.Name,
-                        Image = element.Image,
-                        Age = element.Age,
-                        Weight = element.Weight
-                    };
-                    if (element != null)
-                    {                       
-                        movieOrSerieVM.Characters.Add(characterVM);
+                        var element = movieOrSerie.Characters.FirstOrDefault(x => x.Id == item.Id);
+                        var characterVM = new CharacterGetResponseViewModel
+                        {
+                            Id = element.Id,
+                            Name = element.Name,
+                            Image = element.Image,
+                            Age = element.Age,
+                            Weight = element.Weight
+                        };
+                        if (element != null)
+                        {
+                            movieOrSerieVM.Characters.Add(characterVM);
+                        }
                     }
                 }
-            }
-            if (movieOrSerie.Genre.Any())
-            {
-                
-                foreach (var item in movieOrSerie.Genre)
+                if (movieOrSerie.Genre.Any())
                 {
-                    var element = movieOrSerie.Genre.FirstOrDefault(x => x.Id == item.Id);
-                    var genreVM = new GenreGetResponseViewModel
-                    {
-                        Id = element.Id,
-                        Name = element.Name,
-                        Image = element.Image
-                    };
-                    if (element != null)
-                    {
-                        movieOrSerieVM.Genres.Add(genreVM);
 
+                    foreach (var item in movieOrSerie.Genre)
+                    {
+                        var element = movieOrSerie.Genre.FirstOrDefault(x => x.Id == item.Id);
+                        var genreVM = new GenreGetResponseViewModel
+                        {
+                            Id = element.Id,
+                            Name = element.Name,
+                            Image = element.Image
+                        };
+                        if (element != null)
+                        {
+                            movieOrSerieVM.Genres.Add(genreVM);
+
+                        }
                     }
                 }
+                return Ok(movieOrSerieVM);
             }
-            return Ok(movieOrSerieVM);
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+            
         }
         
         [HttpGet]
         [Route("BusquedaPeliculasOSeries")]
         public IActionResult Get([FromQuery] MovieOrSerieGetRequestViewModel viewModel)
         {
-            var movieOrSeriesList = _movieOrSerieRepository.GetAllMoviesOrSeries();
-
-            if (!movieOrSeriesList.Any()) return NoContent();
+            
 
             try
             {
+                var movieOrSeriesList = _movieOrSerieRepository.GetAllMoviesOrSeries();
+                if (!movieOrSeriesList.Any()) return NoContent();
+
                 if (viewModel.GenreId != 0)
                 {
                     var auxMovieOrSerie = new List<MovieOrSerie>();
@@ -151,8 +170,7 @@ namespace DisneyAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
             }
 
 
@@ -217,9 +235,7 @@ namespace DisneyAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
-
+                return StatusCode(500, $"Error: {ex.Message}");
             }           
         }
 
@@ -251,8 +267,7 @@ namespace DisneyAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
             }
             
         }
@@ -269,8 +284,7 @@ namespace DisneyAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
             }
             
         }

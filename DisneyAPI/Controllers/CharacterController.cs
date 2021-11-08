@@ -6,11 +6,14 @@ using DisneyAPI.ViewModels.CharacterViewModel;
 using DisneyAPI.ViewModels.MovieOrSerieViewModel;
 using System;
 using DisneyAPI.Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 
 namespace DisneyAPI.Controllers
 {
     [ApiController]
-    [Route(template:"api/[controller]")]  
+    [Route(template:"api/[controller]")]
+    [Authorize]
     public class CharacterController : ControllerBase
     {
         private readonly ICharacterRepository _characterRepository;
@@ -23,12 +26,13 @@ namespace DisneyAPI.Controllers
         
         [HttpGet]
         [Route("characters")]
+        [AllowAnonymous]
         public IActionResult Get()
         {
             try
             {
                 var characters = _characterRepository.GetAllCharacters();
-                if (characters == null) return BadRequest("No se ha agregado contenido");
+                if (characters == null) return NoContent();
                 var charactersVM = new List<CharacterListGetViewModel>();
                 foreach (var item in characters)
                 {
@@ -44,8 +48,7 @@ namespace DisneyAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500,$"Error: {ex.Message}");
             }
             
             
@@ -53,13 +56,12 @@ namespace DisneyAPI.Controllers
         [HttpGet]
         [Route("{id}")]
         public IActionResult Get(int id)
-        {
-            var character = _characterRepository.GetCharacter(id);
-            if (character == null) return BadRequest("El personaje no existe");
-
+        {            
             try
             {
-                
+                var character = _characterRepository.GetCharacter(id);
+                if (character == null) return BadRequest("El personaje no existe");
+
                 var characterVM = new CharacterGetResponseViewModel
                 {
                     Id = character.Id,
@@ -96,8 +98,7 @@ namespace DisneyAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
             }
             
             
@@ -106,12 +107,13 @@ namespace DisneyAPI.Controllers
         [Route("obtenerPersonajes")]
         public IActionResult Get([FromQuery] CharacterGetRequestViewModel viewModel)
         {
-            var characters = _characterRepository.GetAllCharacters();
-
-            if (!characters.Any()) return NoContent();
+            
 
             try
             {
+                var characters = _characterRepository.GetAllCharacters();
+                if (!characters.Any()) return NoContent();
+
                 if (viewModel.IdMovie != 0)
                 {
                     characters = characters.Where(x => x.MovieOrSeries.FirstOrDefault(x => x.Id == viewModel.IdMovie) != null).ToList();
@@ -151,8 +153,7 @@ namespace DisneyAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
             }
 
             
@@ -161,28 +162,37 @@ namespace DisneyAPI.Controllers
         [Route("InfoCompletaPersonajes")]
         public IActionResult GetAllCharacterInfo()
         {
-            var characters = _characterRepository.GetAllCharacters();
-            if (characters == null) return BadRequest("No hay contenido disponible");
-            var charactersVM = new List<CharacterGetResponseViewModel>();
-            foreach (var item in characters)
+            try
             {
-                charactersVM.Add(new CharacterGetResponseViewModel {
-                    Id = item.Id,
-                    Name = item.Name,
-                    Age = item.Age,
-                    Weight = item.Weight,
-                    Story = item.Story,
-                    MovieOrSeries = item.MovieOrSeries.Any() ? item.MovieOrSeries.Select(x => new MovieOrSerieResponseViewModel
+                var characters = _characterRepository.GetAllCharacters();
+                if (characters == null) return NoContent();
+                var charactersVM = new List<CharacterGetResponseViewModel>();
+                foreach (var item in characters)
+                {
+                    charactersVM.Add(new CharacterGetResponseViewModel
                     {
-                        Id = x.Id,
-                        Title = x.Title,
-                        Score = x.Score
+                        Id = item.Id,
+                        Name = item.Name,
+                        Age = item.Age,
+                        Weight = item.Weight,
+                        Story = item.Story,
+                        MovieOrSeries = item.MovieOrSeries.Any() ? item.MovieOrSeries.Select(x => new MovieOrSerieResponseViewModel
+                        {
+                            Id = x.Id,
+                            Title = x.Title,
+                            Score = x.Score
 
-                    }).ToList() : null
-                });
+                        }).ToList() : null
+                    });
+                }
+
+                return Ok(charactersVM);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
             }
             
-            return Ok(charactersVM);
         }
         [HttpPost]
         public IActionResult Post(CharacterPostRequestViewModel characterVM)
@@ -216,19 +226,19 @@ namespace DisneyAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
             }
             
         }
         [HttpPut]
         public IActionResult Put(CharacterPutViewModel characterVM)
         {
-            var originalCharacter = _characterRepository.GetCharacter(characterVM.Id);
-            if (originalCharacter == null) return BadRequest("El personaje no existe");
-
+            
             try
             {
+                var originalCharacter = _characterRepository.GetCharacter(characterVM.Id);
+                if (originalCharacter == null) return BadRequest("El personaje no existe");
+
                 originalCharacter.Age = characterVM.Age;
                 originalCharacter.Image = characterVM.Image;
                 originalCharacter.Name = characterVM.Name;
@@ -253,8 +263,7 @@ namespace DisneyAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
             }
             
         }
@@ -262,18 +271,19 @@ namespace DisneyAPI.Controllers
         [Route("{id}")]
         public IActionResult Delete(int id)
         {
-            var originalCharacter = _characterRepository.GetCharacter(id);
-            if (originalCharacter == null) return BadRequest("El personaje no existe");
+            
             try
             {
+                var originalCharacter = _characterRepository.GetCharacter(id);
+                if (originalCharacter == null) return BadRequest("El personaje no existe");
+
                 _characterRepository.Delete(originalCharacter.Id);
                 return Ok("Eliminado");
 
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
             }
            
         }

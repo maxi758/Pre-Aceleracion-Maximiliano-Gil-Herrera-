@@ -5,6 +5,7 @@ using DisneyAPI.ViewModels.MovieOrSerieViewModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -12,6 +13,7 @@ namespace DisneyAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class GenreController : ControllerBase
     {
         private readonly IGenreRepository _genderRepository;
@@ -25,22 +27,31 @@ namespace DisneyAPI.Controllers
 
         // GET: api/<GenderController>
         [HttpGet]
-        [Route("movies")]
+        [Route("genres")]
+        [AllowAnonymous]
         public IActionResult Get()
         {
-            var genders = _genderRepository.GetAllGenders();
-            if (genders == null) return BadRequest("No se ha agregado contenido");
-            var gendersVM = new List<GenreGetResponseViewModel>();
-            foreach (var item in genders)
+            try
             {
-                gendersVM.Add(new GenreGetResponseViewModel
+                var genders = _genderRepository.GetAllGenders();
+                if (genders == null) return NoContent();
+                var gendersVM = new List<GenreGetResponseViewModel>();
+                foreach (var item in genders)
                 {
-                    Id = item.Id,
-                    Image = item.Image,
-                    Name = item.Name
-                });
+                    gendersVM.Add(new GenreGetResponseViewModel
+                    {
+                        Id = item.Id,
+                        Image = item.Image,
+                        Name = item.Name
+                    });
+                }
+                return Ok(gendersVM);
             }
-            return Ok(gendersVM);
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+            
         }
 
         // POST api/<GenderController>
@@ -73,9 +84,7 @@ namespace DisneyAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
-
+                return StatusCode(500, $"Error: {ex.Message}");
             }
         }
 
@@ -107,8 +116,7 @@ namespace DisneyAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
             }
         }
 
@@ -116,17 +124,18 @@ namespace DisneyAPI.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var originalGender = _genderRepository.GetGender(id);
-            if (originalGender == null) return BadRequest("El genero no existe");
+            
             try
             {
+                var originalGender = _genderRepository.GetGender(id);
+                if (originalGender == null) return BadRequest("El genero no existe");
+
                 _genderRepository.Delete(originalGender.Id);
                 return Ok(" Eliminado exitosamente");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
             }
         }
     }
