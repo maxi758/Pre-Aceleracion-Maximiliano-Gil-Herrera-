@@ -122,6 +122,7 @@ namespace DisneyAPI.Controllers
 
         // DELETE api/<GenderController>/5
         [HttpDelete("{id}")]
+        [Authorize(Roles ="Admin")]
         public IActionResult Delete(int id)
         {
             

@@ -273,6 +273,7 @@ namespace DisneyAPI.Controllers
         }
         [HttpDelete]
         [Route("{id}")]
+        [Authorize(Roles ="Admin")]
         public IActionResult Delete(int id)
         {
             var originalMovieOrSerie = _movieOrSerieRepository.GetMovieOrSerie(id);

@@ -165,7 +165,7 @@ namespace DisneyAPI.Controllers
             return Ok(new
             {
                 Status = "Success",
-                Message = "User Created Successfully!"
+                Message = $"User {user.UserName} Created Successfully!"
             });
 
         }
