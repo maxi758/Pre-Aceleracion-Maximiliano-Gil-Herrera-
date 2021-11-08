@@ -6,6 +6,7 @@ using DisneyAPI.ViewModels.MovieOrSerieViewModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DisneyAPI.Controllers
 {
@@ -25,6 +26,7 @@ namespace DisneyAPI.Controllers
 
         [HttpGet]
         [Route("movies")]
+        [Authorize]
         public IActionResult Get()
         {
             var movieOrSeries = _movieOrSerieRepository.GetAllMoviesOrSeries();
@@ -169,30 +171,47 @@ namespace DisneyAPI.Controllers
                     Score = movieOrSerieVM.Score
                 };
                 if (movieOrSerieVM.CharactersId.Any())
-                {
+                {                  
                     var characterList = _characterRepository.GetAllCharacters();
-                    foreach (var item in movieOrSerieVM.CharactersId)
+                    if (characterList.Any())
                     {
-                        var element = characterList.FirstOrDefault(x => x.Id == item);
-                        if (element != null)
+                        if (movieOrSerie.Characters == null)
                         {
-                            movieOrSerie.Characters.Add(element);
+                            movieOrSerie.Characters = new List<Character>();
+                        }
+                        foreach (var item in movieOrSerieVM.CharactersId)
+                        {
+                            var element = characterList.FirstOrDefault(x => x.Id == item);
+                            if (element != null)
+                            {
+                                movieOrSerie.Characters.Add(element);
 
+                            }
                         }
                     }
+                  
                 }
                 if (movieOrSerieVM.GenresId.Any())
                 {
                     var gendersList = _genderRepository.GetAllGenders();
-                    foreach (var item in movieOrSerieVM.GenresId)
+                    if (gendersList.Any())
                     {
-                        var element = gendersList.FirstOrDefault(x => x.Id == item);
-                        if (element != null)
+                        if (movieOrSerie.Genre == null)
                         {
-                            movieOrSerie.Genre.Add(element);
-
+                            movieOrSerie.Genre = new List<Genre>();
                         }
+                        foreach (var item in movieOrSerieVM.GenresId)
+                        {
+                            var element = gendersList.FirstOrDefault(x => x.Id == item);
+                            if (element != null)
+                            {
+                                movieOrSerie.Genre.Add(element);
+
+                            }
+                        }
+
                     }
+                    
                 }
                 return Ok(_movieOrSerieRepository.Add(movieOrSerie));
             }
