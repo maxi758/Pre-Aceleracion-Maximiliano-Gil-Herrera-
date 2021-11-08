@@ -36,7 +36,7 @@ namespace DisneyAPI.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"No Error: {ex.Message}");
+                Console.WriteLine($"Error: {ex.Message}");
                 return ;
             }
             
