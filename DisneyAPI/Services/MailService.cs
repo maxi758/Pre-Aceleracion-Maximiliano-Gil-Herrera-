@@ -1,10 +1,9 @@
 ﻿using DisneyAPI.Interfaces;
 using DisneyAPI.ViewModels.Services.MailService;
+using Microsoft.Extensions.Logging;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace DisneyAPI.Services
@@ -12,10 +11,12 @@ namespace DisneyAPI.Services
     public class MailService : IMailService
     {
         private readonly ISendGridClient _SendGridclient;
+        private readonly ILogger<MailService> _logger;
 
-        public MailService(ISendGridClient client)
+        public MailService(ISendGridClient client, ILogger<MailService> logger)
         {
             _SendGridclient = client;
+            _logger = logger;
         }
         public async Task SendEmail(MailServiceRequestViewModel model)
         {
@@ -34,12 +35,15 @@ namespace DisneyAPI.Services
                     Console.WriteLine($"{response.StatusCode} /n Error en el envío del email de confirmación de registro");
                 }
             }
-            catch (Exception ex)
+            catch (AggregateException ae)
             {
-                Console.WriteLine($"Error: {ex.Message}");
-                return ;
+                foreach (var e in ae.InnerExceptions)
+                {
+                    Console.WriteLine("{0}:\n   {1}", e.GetType().Name, e.Message);
+                    _logger.LogError($"Unhandled exception: {e.Message} ");
+                }
             }
-            
+
         }
     }
 }
