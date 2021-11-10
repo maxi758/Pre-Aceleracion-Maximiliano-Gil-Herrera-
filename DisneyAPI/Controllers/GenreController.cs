@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
+using DisneyAPI.ViewModels.GenreViewModel;
+using AutoMapper;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -18,11 +20,13 @@ namespace DisneyAPI.Controllers
     {
         private readonly IGenreRepository _genderRepository;
         private readonly IMovieOrSerieRepository _movieOrSerieRepository;
+        private readonly IMapper _mapper;
 
-        public GenreController(IGenreRepository genderRepository, IMovieOrSerieRepository movieOrSerieRepository)
+        public GenreController(IGenreRepository genderRepository, IMovieOrSerieRepository movieOrSerieRepository, IMapper mapper)
         {
             _genderRepository = genderRepository;
             _movieOrSerieRepository = movieOrSerieRepository;
+            _mapper = mapper;
         }
 
         // GET: api/<GenderController>
@@ -33,19 +37,12 @@ namespace DisneyAPI.Controllers
         {
             try
             {
-                var genders = _genderRepository.GetAllGenders();
-                if (genders == null) return NoContent();
-                var gendersVM = new List<GenreGetResponseViewModel>();
-                foreach (var item in genders)
-                {
-                    gendersVM.Add(new GenreGetResponseViewModel
-                    {
-                        Id = item.Id,
-                        Image = item.Image,
-                        Name = item.Name
-                    });
-                }
-                return Ok(gendersVM);
+                var genres = _genderRepository.GetAllGenders();
+                if (genres == null) return NoContent();
+                var genresVM = new List<GenreGetResponseViewModel>();
+                genresVM = _mapper.Map<List<Genre>, List<GenreGetResponseViewModel>>(genres);
+
+                return Ok(genresVM);
             }
             catch (Exception ex)
             {
@@ -56,31 +53,17 @@ namespace DisneyAPI.Controllers
 
         // POST api/<GenderController>
         [HttpPost]
-        public IActionResult Post(GenrePostRequestViewModel genderVM)
+        public IActionResult Post(GenrePostRequestViewModel genreVM)
         {
             try
             {
-                Genre gender = new Genre
+                var genre = _mapper.Map<GenrePostRequestViewModel, Genre>(genreVM); 
+                if (genreVM.MovieOrSeriesId.Any())
                 {
-                    Id = genderVM.Id,
-                    Image = genderVM.Image,
-                    Name = genderVM.Name
-                 
-                };
-                if (genderVM.MovieOrSeriesId.Any())
-                {
-                    var movieOrSeriesList = _movieOrSerieRepository.GetAllMoviesOrSeries();
-                    foreach (var item in genderVM.MovieOrSeriesId)
-                    {
-                        var element = movieOrSeriesList.FirstOrDefault(x => x.Id == item);
-                        if (element != null)
-                        {
-                            gender.MovieOrSeries.Add(element);
-
-                        }
-                    }
+                    var movieOrSerieList = _movieOrSerieRepository.GetAllMoviesOrSeries();
+                    genre.MovieOrSeries = movieOrSerieList.Where(x => x.Id == genreVM.MovieOrSeriesId.FirstOrDefault(y => y == x.Id)).ToList();
                 }
-                return Ok(_genderRepository.Add(gender));
+                return Ok(_genderRepository.Add(genre));
             }
             catch (Exception ex)
             {
@@ -90,29 +73,20 @@ namespace DisneyAPI.Controllers
 
         // PUT api/<GenderController>/5
         [HttpPut]
-        public IActionResult Put( GenrePutRequestViewModel genderVM)
+        public IActionResult Put( GenrePutRequestViewModel genreVM)
         {
-            var originalGender = _genderRepository.GetGender(genderVM.Id);
-            if (originalGender == null) return BadRequest("La pelicula o serie no existe");
+            var originalGenre = _genderRepository.GetGender(genreVM.Id);
+            if (originalGenre == null) return BadRequest("La pelicula o serie no existe");
             try
             {
-                originalGender.Image = genderVM.Image;
-                originalGender.Name = genderVM.Name;
+                _mapper.Map<GenrePutRequestViewModel, Genre>(genreVM, originalGenre);
 
-                if (genderVM.MovieOrSeriesId.Any())
+                if (genreVM.MovieOrSeriesId.Any())
                 {
                     var movieOrSerieList = _movieOrSerieRepository.GetAllMoviesOrSeries();
-                    foreach (var item in genderVM.MovieOrSeriesId)
-                    {
-                        var element = movieOrSerieList.FirstOrDefault(x => x.Id == item);
-                        if (element != null)
-                        {
-                            originalGender.MovieOrSeries.Add(element);
-
-                        }
-                    }
+                    originalGenre.MovieOrSeries = movieOrSerieList.Where(x => x.Id == genreVM.MovieOrSeriesId.FirstOrDefault(y => y == x.Id)).ToList();
                 }
-                return Ok(_genderRepository.Update(originalGender));
+                return Ok(_genderRepository.Update(originalGenre));
             }
             catch (Exception ex)
             {

@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
+using DisneyAPI.ViewModels.GenreViewModel;
+using AutoMapper;
 
 namespace DisneyAPI.Controllers
 {
@@ -18,11 +20,14 @@ namespace DisneyAPI.Controllers
         private readonly IMovieOrSerieRepository _movieOrSerieRepository;
         private readonly IGenreRepository _genderRepository;
         private readonly ICharacterRepository _characterRepository;
-        public MovieOrSerieController(IMovieOrSerieRepository movieOrSerieRepository, ICharacterRepository characterRepository, IGenreRepository genderRepository)
+        private readonly IMapper _mapper;
+        public MovieOrSerieController(IMovieOrSerieRepository movieOrSerieRepository, ICharacterRepository characterRepository, 
+            IGenreRepository genderRepository, IMapper mapper)
         {
             _movieOrSerieRepository = movieOrSerieRepository;
             _characterRepository = characterRepository;
             _genderRepository = genderRepository;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -35,16 +40,7 @@ namespace DisneyAPI.Controllers
                 var movieOrSeries = _movieOrSerieRepository.GetAllMoviesOrSeries();
                 if (movieOrSeries == null) return NoContent();
                 var moviesOrSeriesVM = new List<MovieOrSerieGetResponseViewModel>();
-                foreach (var item in movieOrSeries)
-                {
-                    moviesOrSeriesVM.Add(new MovieOrSerieGetResponseViewModel
-                    {
-                        Imagen = item.Imagen,
-                        CreationDate = item.CreationDate,
-                        Title = item.Title
-
-                    });
-                }
+                _mapper.Map<List<MovieOrSerie>, List<MovieOrSerieGetResponseViewModel>>(movieOrSeries, moviesOrSeriesVM);
                 return Ok(moviesOrSeriesVM);
 
             }
@@ -64,53 +60,8 @@ namespace DisneyAPI.Controllers
                 var movieOrSerie = _movieOrSerieRepository.GetMovieOrSerie(id);
 
                 if (movieOrSerie == null) return BadRequest("La pelicula o serie  no existe");
-                MovieOrSerieGetAllDataViewModel movieOrSerieVM = new MovieOrSerieGetAllDataViewModel
-                {
-                    Id = movieOrSerie.Id,
-                    Imagen = movieOrSerie.Imagen,
-                    CreationDate = movieOrSerie.CreationDate,
-                    Title = movieOrSerie.Title,
-                    Score = movieOrSerie.Score,
-
-                };
-                if (movieOrSerie.Characters.Any())
-                {
-                    foreach (var item in movieOrSerie.Characters)
-                    {
-                        var element = movieOrSerie.Characters.FirstOrDefault(x => x.Id == item.Id);
-                        var characterVM = new CharacterGetResponseViewModel
-                        {
-                            Id = element.Id,
-                            Name = element.Name,
-                            Image = element.Image,
-                            Age = element.Age,
-                            Weight = element.Weight
-                        };
-                        if (element != null)
-                        {
-                            movieOrSerieVM.Characters.Add(characterVM);
-                        }
-                    }
-                }
-                if (movieOrSerie.Genre.Any())
-                {
-
-                    foreach (var item in movieOrSerie.Genre)
-                    {
-                        var element = movieOrSerie.Genre.FirstOrDefault(x => x.Id == item.Id);
-                        var genreVM = new GenreGetResponseViewModel
-                        {
-                            Id = element.Id,
-                            Name = element.Name,
-                            Image = element.Image
-                        };
-                        if (element != null)
-                        {
-                            movieOrSerieVM.Genres.Add(genreVM);
-
-                        }
-                    }
-                }
+                var movieOrSerieVM = _mapper.Map<MovieOrSerie, MovieOrSerieGetAllResponseViewModel>(movieOrSerie);
+                
                 return Ok(movieOrSerieVM);
             }
             catch (Exception ex)
@@ -124,8 +75,6 @@ namespace DisneyAPI.Controllers
         [Route("BusquedaPeliculasOSeries")]
         public IActionResult Get([FromQuery] MovieOrSerieGetRequestViewModel viewModel)
         {
-            
-
             try
             {
                 var movieOrSeriesList = _movieOrSerieRepository.GetAllMoviesOrSeries();
@@ -133,18 +82,7 @@ namespace DisneyAPI.Controllers
 
                 if (viewModel.GenreId != 0)
                 {
-                    var auxMovieOrSerie = new List<MovieOrSerie>();
-                    foreach (var item in movieOrSeriesList)
-                    {
-                        var element = item.Genre.Where(x => x.Id == viewModel.GenreId);
-                        if (element != null)
-                        {
-
-                            auxMovieOrSerie.Add(item);
-
-                        }
-                    }
-                    movieOrSeriesList = movieOrSeriesList.Intersect(auxMovieOrSerie).ToList();
+                    movieOrSeriesList = movieOrSeriesList.Where(x => x.Genre.FirstOrDefault(x => x.Id == viewModel.GenreId) != null).ToList();
                 }
                 if (!string.IsNullOrEmpty(viewModel.Name))
                 {
@@ -154,16 +92,8 @@ namespace DisneyAPI.Controllers
                 if (!movieOrSeriesList.Any()) return NoContent();
 
                 var movieOrSerieVM = new List<MovieOrSerieGetResponseViewModel>();
-                foreach (var item in movieOrSeriesList)
-                {
-                    movieOrSerieVM.Add(new MovieOrSerieGetResponseViewModel
-                    {
-                        Imagen = item.Imagen,
-                        Title = item.Title,
-                        CreationDate = item.CreationDate
+                _mapper.Map<List<MovieOrSerie>, List<MovieOrSerieGetResponseViewModel>>(movieOrSeriesList, movieOrSerieVM);
 
-                    });
-                }
                 if (!string.IsNullOrEmpty(viewModel.Order)) return (viewModel.Order.ToUpper() == "DESC") ? Ok(movieOrSerieVM.OrderByDescending(x => x.CreationDate))
                      : (viewModel.Order.ToUpper() == "ASC") ? Ok(movieOrSerieVM.OrderBy(x => x.CreationDate)): Ok(movieOrSerieVM);
                 return Ok(movieOrSerieVM);
@@ -180,14 +110,8 @@ namespace DisneyAPI.Controllers
         {
             try
             {
-                MovieOrSerie movieOrSerie = new MovieOrSerie
-                {
-                    Id = movieOrSerieVM.Id,
-                    CreationDate = movieOrSerieVM.CreationDate,
-                    Imagen = movieOrSerieVM.Imagen,
-                    Title = movieOrSerieVM.Title,
-                    Score = movieOrSerieVM.Score
-                };
+                var movieOrSerie = _mapper.Map<MovieOrSeriePostRequestViewModel, MovieOrSerie>(movieOrSerieVM);
+                
                 if (movieOrSerieVM.CharactersId.Any())
                 {                  
                     var characterList = _characterRepository.GetAllCharacters();
@@ -197,15 +121,8 @@ namespace DisneyAPI.Controllers
                         {
                             movieOrSerie.Characters = new List<Character>();
                         }
-                        foreach (var item in movieOrSerieVM.CharactersId)
-                        {
-                            var element = characterList.FirstOrDefault(x => x.Id == item);
-                            if (element != null)
-                            {
-                                movieOrSerie.Characters.Add(element);
-
-                            }
-                        }
+                        movieOrSerie.Characters = characterList.Where(x => x.Id == movieOrSerieVM.CharactersId.FirstOrDefault(y => y == x.Id)).ToList();
+                       
                     }
                   
                 }
@@ -218,16 +135,8 @@ namespace DisneyAPI.Controllers
                         {
                             movieOrSerie.Genre = new List<Genre>();
                         }
-                        foreach (var item in movieOrSerieVM.GenresId)
-                        {
-                            var element = gendersList.FirstOrDefault(x => x.Id == item);
-                            if (element != null)
-                            {
-                                movieOrSerie.Genre.Add(element);
-
-                            }
-                        }
-
+                        movieOrSerie.Genre = gendersList.Where(x => x.Id == movieOrSerieVM.GenresId.FirstOrDefault(y => y == x.Id)).ToList();
+                        
                     }
                     
                 }
@@ -246,22 +155,22 @@ namespace DisneyAPI.Controllers
             if (originalMovieOrSerie == null) return BadRequest("La pelicula o serie no existe");
             try
             {
-                originalMovieOrSerie.CreationDate = movieOrSerieVM.CreationDate;
-                originalMovieOrSerie.Imagen = movieOrSerieVM.Imagen;
-                originalMovieOrSerie.Score = movieOrSerieVM.Score;
-                originalMovieOrSerie.Title = movieOrSerieVM.Title;
+                _mapper.Map<MovieOrSeriePutViewModel, MovieOrSerie>(movieOrSerieVM, originalMovieOrSerie);
+
                 if (movieOrSerieVM.CharactersId.Any())
                 {
                     var characterList = _characterRepository.GetAllCharacters();
-                    foreach (var item in movieOrSerieVM.CharactersId)
+                    originalMovieOrSerie.Characters = characterList.Where(x => x.Id == movieOrSerieVM.CharactersId.FirstOrDefault(y => y == x.Id)).ToList();
+                    
+                }
+                if (movieOrSerieVM.GenresId.Any())
+                {
+                    var gendersList = _genderRepository.GetAllGenders();
+                    if (gendersList.Any())
                     {
-                        var element = characterList.FirstOrDefault(x => x.Id == item);
-                        if (element != null)
-                        {
-                            originalMovieOrSerie.Characters.Add(element);
-
-                        }
+                        originalMovieOrSerie.Genre = gendersList.Where(x => x.Id == movieOrSerieVM.GenresId.FirstOrDefault(y => y == x.Id)).ToList();
                     }
+
                 }
                 return Ok(_movieOrSerieRepository.Update(originalMovieOrSerie));
             }

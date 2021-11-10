@@ -8,6 +8,7 @@ using System;
 using DisneyAPI.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using AutoMapper;
 
 namespace DisneyAPI.Controllers
 {
@@ -18,12 +19,14 @@ namespace DisneyAPI.Controllers
     {
         private readonly ICharacterRepository _characterRepository;
         private readonly IMovieOrSerieRepository _movieOrSerieRepository;
-        public CharacterController(ICharacterRepository characterRepository, IMovieOrSerieRepository movieOrSerieRepository)
+        private readonly IMapper _mapper;
+        public CharacterController(ICharacterRepository characterRepository, IMovieOrSerieRepository movieOrSerieRepository, IMapper mapper)
         {
             _characterRepository = characterRepository;
             _movieOrSerieRepository = movieOrSerieRepository;
+            _mapper = mapper;
         }
-        
+
         [HttpGet]
         [Route("characters")]
         [AllowAnonymous]
@@ -34,17 +37,9 @@ namespace DisneyAPI.Controllers
                 var characters = _characterRepository.GetAllCharacters();
                 if (characters == null) return NoContent();
                 var charactersVM = new List<CharacterListGetViewModel>();
-                foreach (var item in characters)
-                {
-                    charactersVM.Add(new CharacterListGetViewModel
-                    {
-                        Image = item.Image,
-                        Nombre = item.Name
-                    
-                    });
-                }
-                return Ok(charactersVM);
+                charactersVM = _mapper.Map<List<Character>, List<CharacterListGetViewModel>>(characters);
 
+                return Ok(charactersVM);
             }
             catch (Exception ex)
             {
@@ -62,38 +57,8 @@ namespace DisneyAPI.Controllers
                 var character = _characterRepository.GetCharacter(id);
                 if (character == null) return BadRequest("El personaje no existe");
 
-                var characterVM = new CharacterGetResponseViewModel
-                {
-                    Id = character.Id,
-                    Age = character.Age,
-                    Name = character.Name,
-                    Image = character.Image,
-                    Weight = character.Weight,
-                    Story = character.Story
-                };
-                if (character.MovieOrSeries.Any())
-                {
-                    var movieOrSerieList = _movieOrSerieRepository.GetAllMoviesOrSeries();
-                    
-                    foreach (var item in character.MovieOrSeries)
-                    {
-                        var element = movieOrSerieList.FirstOrDefault(x => x.Id == item.Id);
-                        var MovieOrSerieVM = new MovieOrSerieResponseViewModel()
-                        {
-                            Id = element.Id,
-                            Score = element.Score,
-                            Title = element.Title
-
-                        };
-                        
-                        if (element != null)
-                        {                           
-
-                            characterVM.MovieOrSeries.Add(MovieOrSerieVM);
-
-                        }
-                    }
-                }
+                var characterVM = _mapper.Map<Character, CharacterGetResponseViewModel>(character);
+              
                 return Ok(characterVM);
             }
             catch (Exception ex)
@@ -107,8 +72,6 @@ namespace DisneyAPI.Controllers
         [Route("obtenerPersonajes")]
         public IActionResult Get([FromQuery] CharacterGetRequestViewModel viewModel)
         {
-            
-
             try
             {
                 var characters = _characterRepository.GetAllCharacters();
@@ -117,7 +80,7 @@ namespace DisneyAPI.Controllers
                 if (viewModel.IdMovie != 0)
                 {
                     characters = characters.Where(x => x.MovieOrSeries.FirstOrDefault(x => x.Id == viewModel.IdMovie) != null).ToList();
-                   // characters.RemoveAll(x => x.MovieOrSeries.Where(x => x.Id != viewModel.IdMovie) !=null);
+
                 }
                 if (!string.IsNullOrEmpty(viewModel.Name))
                 {
@@ -129,26 +92,8 @@ namespace DisneyAPI.Controllers
                 }
 
                 var charactersVM = new List<CharacterGetResponseViewModel>();
-                foreach (var item in characters)
-                {
-                    charactersVM.Add(new CharacterGetResponseViewModel
-                    {
-                        Id = item.Id,
-                        Name = item.Name,
-                        Image = item.Image,
-                        Age = item.Age,
-                        Weight = item.Weight,
-                        Story = item.Story,
-                        MovieOrSeries = item.MovieOrSeries.Any() ? item.MovieOrSeries.Select(x => new MovieOrSerieResponseViewModel
-                        {
-                            Id = x.Id,
-                            Title = x.Title,
-                            Score = x.Score
-
-                        }).ToList() : null
-                    });
-                }
-
+                charactersVM = _mapper.Map<List<Character>, List<CharacterGetResponseViewModel>>(characters);
+                
                 return Ok(charactersVM.OrderBy(x => x.Id));
             }
             catch (Exception ex)
@@ -167,24 +112,7 @@ namespace DisneyAPI.Controllers
                 var characters = _characterRepository.GetAllCharacters();
                 if (characters == null) return NoContent();
                 var charactersVM = new List<CharacterGetResponseViewModel>();
-                foreach (var item in characters)
-                {
-                    charactersVM.Add(new CharacterGetResponseViewModel
-                    {
-                        Id = item.Id,
-                        Name = item.Name,
-                        Age = item.Age,
-                        Weight = item.Weight,
-                        Story = item.Story,
-                        MovieOrSeries = item.MovieOrSeries.Any() ? item.MovieOrSeries.Select(x => new MovieOrSerieResponseViewModel
-                        {
-                            Id = x.Id,
-                            Title = x.Title,
-                            Score = x.Score
-
-                        }).ToList() : null
-                    });
-                }
+                charactersVM = _mapper.Map<List<Character>, List<CharacterGetResponseViewModel>>(characters);
 
                 return Ok(charactersVM);
             }
@@ -199,27 +127,16 @@ namespace DisneyAPI.Controllers
         {
             try
             {
-                Character character = new Character
-                {
-                    Id = characterVM.Id,
-                    Age = characterVM.Age,
-                    Name = characterVM.Name,
-                    Weight = characterVM.Weight,
-                    Story = characterVM.Story,
-                    Image = characterVM.Image
-                };
+                Character character = _mapper.Map<CharacterPostRequestViewModel, Character>(characterVM);
                 if (characterVM.MovieOrSeriesId.Any())
                 {
-                    var movieOrSerieList = _movieOrSerieRepository.GetAllEntities();
-                    foreach (var item in characterVM.MovieOrSeriesId)
+                    if (character.MovieOrSeries == null) 
                     {
-                        var element = movieOrSerieList.FirstOrDefault(x => x.Id == item);
-                        if (element != null)
-                        {
-                            character.MovieOrSeries.Add(element);
-
-                        }
+                        character.MovieOrSeries = new List<MovieOrSerie>();
                     }
+                    var movieOrSerieList = _movieOrSerieRepository.GetAllEntities();
+                    character.MovieOrSeries = movieOrSerieList.Where(x => x.Id == characterVM.MovieOrSeriesId.FirstOrDefault(y => y == x.Id)).ToList();
+                    
                 }
 
                 return Ok(_characterRepository.Add(character));
@@ -239,24 +156,14 @@ namespace DisneyAPI.Controllers
                 var originalCharacter = _characterRepository.GetCharacter(characterVM.Id);
                 if (originalCharacter == null) return BadRequest("El personaje no existe");
 
-                originalCharacter.Age = characterVM.Age;
-                originalCharacter.Image = characterVM.Image;
-                originalCharacter.Name = characterVM.Name;
-                originalCharacter.Story = characterVM.Story;
-                originalCharacter.Weight = characterVM.Weight;
-
+                _mapper.Map<CharacterPutViewModel, Character>(characterVM, originalCharacter);
+              
                 if (characterVM.MovieOrSeriesId.Any())
                 {
                     var movieOrSerieList = _movieOrSerieRepository.GetAllEntities();
-                    foreach (var item in characterVM.MovieOrSeriesId)
-                    {
-                        var element = movieOrSerieList.FirstOrDefault(x => x.Id == item);
-                        if (element != null)
-                        {
-                            originalCharacter.MovieOrSeries.Add(element);
 
-                        }
-                    }
+                    originalCharacter.MovieOrSeries = movieOrSerieList.Where(x => x.Id == characterVM.MovieOrSeriesId.FirstOrDefault(y => y == x.Id)).ToList();
+                    
                 }
                 _characterRepository.Update(originalCharacter);
                 return Ok(originalCharacter);

@@ -1,6 +1,8 @@
+using AutoMapper;
 using DisneyAPI.Contexts;
 using DisneyAPI.Entities;
 using DisneyAPI.Interfaces;
+using DisneyAPI.Mapper;
 using DisneyAPI.Repositories;
 using DisneyAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -35,6 +37,12 @@ namespace DisneyAPI
             services.AddControllers().AddNewtonsoftJson(options =>
                 options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
             );
+            var mappingConfig = new MapperConfiguration(mc =>
+            {
+                mc.AddProfile(new MapConfig());
+            });
+            IMapper mapper = mappingConfig.CreateMapper();
+            services.AddSingleton(mapper);
             //Added auth to swagger
             services.AddSwaggerGen(c =>
             {

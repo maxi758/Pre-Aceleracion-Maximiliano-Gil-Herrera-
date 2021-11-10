@@ -1,8 +1,5 @@
 ﻿using DisneyAPI.ViewModels.MovieOrSerieViewModel;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace DisneyAPI.ViewModels.CharacterViewModel
 {
